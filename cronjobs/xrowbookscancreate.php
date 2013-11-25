@@ -2,6 +2,7 @@
 
 $cli->output( 'Start script for converting pdf to image...' );
 $cli->output( 'Time: ' . date( 'd.m.Y H:i', time() ) );
+$start = time();
 //login as admin
 $user = eZUser::fetch( eZINI::instance()->variable( 'UserSettings', 'UserCreatorID' ) );
 $user->loginCurrent();
@@ -90,66 +91,89 @@ if( count( $bookscans ) > 0 )
                                                     {
                                                         $cli->output( 'Get pdf (' . $filePath . ') to explode into single pages' );
                                                         $file->fileFetch( $filePath );
-                                                        $version = $attributeFileForIndexing->Version;
-                                                        $pdfTmp = new FPDI();
-                                                        $pageCount = $pdfTmp->setSourceFile( $filePath );
+                                                        $gostscript = false;
+                                                        try
+                                                        {
+                                                            $pdfTmp = new FPDI();
+                                                            $pageCount = $pdfTmp->setSourceFile( $filePath );
+                                                        }
+                                                        catch ( Exception $e )
+                                                        {
+                                                            eZDebug::writeError( $e->getMessage(), 'Cronjob xrowbookscancreate.php' );
+                                                            $cli->error( $e->getMessage() . ', Cronjob xrowbookscancreate.php' );
+                                                            $pageCount = 800;
+                                                            $gostscript = true;
+                                                        }
                                                         for( $i = 1; $i <= $pageCount; $i++)
                                                         {
-                                                            $pdf = new FPDI();
-                                                            $pdf->setSourceFile( $filePath );
                                                             $data = array();
-                                                            // get one page from original pdf
-                                                            $tplIdx = $pdf->importPage( $i );
-                                                            if( $tplIdx )
+                                                            $filePathNew = preg_replace( '/.pdf/', '_' . $i . '.pdf', $filePath );
+                                                            if( $gostscript === false )
+                                                            {
+                                                                $pdf = new FPDI();
+                                                                $pdf->setSourceFile( $filePath );
+                                                                // get one page from original pdf
+                                                                $tplIdx = $pdf->importPage( $i );
+                                                                if( $tplIdx )
+                                                                {
+                                                                    $cli->output( '' );
+                                                                    $cli->output( 'Start creating with FPDI page no' . $i . '(' . $filePathNew . ')' );
+                                                                    $pdf->addPage();
+                                                                    $pdf->useTemplate( $tplIdx );
+                                                                    // create one-page-pdf xy from the original pdf to local
+                                                                    $pdf->Output( $filePathNew, 'F' );
+                                                                }
+                                                            }
+                                                            else 
                                                             {
                                                                 $cli->output( '' );
-                                                                $cli->output( 'Start creating page no' . $i . '(' . $filePathNew . ')' );
-                                                                $pdf->addPage();
-                                                                $pdf->useTemplate( $tplIdx );
-                                                                $filePathNew = preg_replace( '/.pdf/', '_' . $i . '.pdf', $filePath );
-                                                                // create one-page-pdf xy from the original pdf to local
-                                                                $pdf->Output( $filePathNew, 'F' );
-                                                                if ( !file_exists( $filePathNew ) )
+                                                                $cli->output( 'Start creating with GS page no' . $i . '(' . $filePathNew . ')' );
+                                                                $convert = explodePDFwithGS( $filePath, $filePathNew, $i );
+                                                                if( $convert === false )
                                                                 {
-                                                                    eZDebug::writeError( 'File ' . $filePathNew . ' does not exist', 'Cronjob xrowbookscancreate.php' );
-                                                                    $cli->error( 'File ' . $filePathNew . ' does not exist, Cronjob xrowbookscancreate.php' );
-                                                                    $script->shutdown( 1 );
+                                                                    break;
                                                                 }
-                                                                else
+                                                            }
+                                                            if ( !file_exists( $filePathNew ) )
+                                                            {
+                                                                eZDebug::writeError( 'File ' . $filePathNew . ' does not exist', 'Cronjob xrowbookscancreate.php' );
+                                                                $cli->error( 'File ' . $filePathNew . ' does not exist, Cronjob xrowbookscancreate.php' );
+                                                                //$script->shutdown( 1 );
+                                                            }
+                                                            else
+                                                            {
+                                                                $cli->output( 'Created...' );
+                                                                // convert pdf to image
+                                                                $imageFilePathNew = preg_replace( '/.pdf/', '.png', $filePathNew );
+                                                                $imageFilePathNewTmp = preg_replace( '/.pdf/', 'tmp.png', $filePathNew );
+                                                                $cli->output( 'Start converting page no' . $i . ' to an image (' . $imageFilePathNew . ')' );
+                                                                $status = convertPDFtoImage( $filePathNew, $imageFilePathNewTmp, $settingsBlock, $script );
+                                                                if( $status )
                                                                 {
-                                                                    $cli->output( 'Created...' );
-                                                                    // convert pdf to image
-                                                                    $imageFilePathNew = preg_replace( '/.pdf/', '.png', $filePathNew );
-                                                                    $imageFilePathNewTmp = preg_replace( '/.pdf/', 'tmp.png', $filePathNew );
-                                                                    $cli->output( 'Start converting page no' . $i . ' to an image (' . $imageFilePathNew . ')' );
-                                                                    $status = convertPDFtoImage( $filePathNew, $imageFilePathNewTmp, $settingsBlock, $script );
-                                                                    if( $status )
+                                                                    $cli->output( 'Converted...' );
+                                                                    $data[$defaultVars['classAttributeNameFile']] = $filePathNew;
+                                                                    $data[$defaultVars['classAttributeNameImage']] = $imageFilePathNew;
+                                                                    $data['name'] = $parentNode->Name . ' ' . $i;
+                                                                    // create new object
+                                                                    try
                                                                     {
-                                                                        $cli->output( 'Converted...' );
-                                                                        $data[$defaultVars['classAttributeNameFile']] = $filePathNew;
-                                                                        $data[$defaultVars['classAttributeNameImage']] = $imageFilePathNew;
-                                                                        $data['name'] = $parentNode->Name . ' ' . $i;
-                                                                        // create new object
-                                                                        try
+                                                                        $cli->output( 'Start creating new object class ' . $defaultVars['className'] . ' under ' . $parentNode->Name . '(' . $parentNode->NodeID . ')' );
+                                                                        $xrowBookScan = new xrowBookScan( $defaultVars, $parentNode );
+                                                                        $contentObject = $xrowBookScan->create( $i, $data, $user->attribute( 'contentobject_id' ), $sectionID );
+                                                                        if( $contentObject instanceof eZContentObject )
                                                                         {
-                                                                            $cli->output( 'Start creating new object class ' . $defaultVars['className'] . ' under ' . $parentNode->Name . '(' . $parentNode->NodeID . ')' );
-                                                                            $xrowBookScan = new xrowBookScan( $defaultVars, $parentNode );
-                                                                            $contentObject = $xrowBookScan->create( $i, $data, $user->attribute( 'contentobject_id' ), $sectionID );
-                                                                            if( $contentObject instanceof eZContentObject )
-                                                                            {
-                                                                                // delete pdf_xy.pdf and image_xy.png
-                                                                                unlink($filePathNew);
-                                                                                unlink($imageFilePathNew);
-                                                                                unlink($imageFilePathNewTmp);
-                                                                                $cli->output( 'Deleted tmp files' );
-                                                                            }
+                                                                            // delete pdf_xy.pdf and image_xy.png
+                                                                            unlink($filePathNew);
+                                                                            unlink($imageFilePathNew);
+                                                                            unlink($imageFilePathNewTmp);
+                                                                            $cli->output( 'Deleted tmp files' );
                                                                         }
-                                                                        catch ( Exception $e )
-                                                                        {
-                                                                            eZDebug::writeError( $e->getMessage() . ', Line: ' . $e->getLine(), 'Cronjob xrowbookscancreate.php' );
-                                                                            $cli->error( $e->getMessage() . ', Line: ' . $e->getLine() . ', Cronjob xrowbookscancreate.php' );
-                                                                            $script->shutdown( 1 );
-                                                                        }
+                                                                    }
+                                                                    catch ( Exception $e )
+                                                                    {
+                                                                        eZDebug::writeError( $e->getMessage() . ', Line: ' . $e->getLine(), 'Cronjob xrowbookscancreate.php' );
+                                                                        $cli->error( $e->getMessage() . ', Line: ' . $e->getLine() . ', Cronjob xrowbookscancreate.php' );
+                                                                        $script->shutdown( 1 );
                                                                     }
                                                                 }
                                                             }
@@ -162,10 +186,9 @@ if( count( $bookscans ) > 0 )
                                                     {
                                                         eZDebug::writeError( 'File ' . $filePath . ' does not exist', 'Cronjob xrowbookscan.php' );
                                                         $cli->error( 'File ' . $filePath . ' does not exist, Cronjob xrowbookscancreate.php' );
-                                                        $script->shutdown( 1 );
+                                                        //$script->shutdown( 1 );
                                                     }
                                                 }
-                                                
                                             }
                                             else
                                             {
@@ -206,11 +229,35 @@ else
 {
     $cli->output( 'There is nothing to do...' );
 }
+
 $cli->output( '' );
-$cli->output( 'Ready' );
+$cli->output( 'Ready, starts at ' . $start . ' ends at' . date( 'd.m.Y H:i', time() ) );
 $cli->output( 'Time: ' . date( 'd.m.Y H:i', time() ) );
 
-function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock, $script )
+function explodePDFwithGS( $pdfFileName, $pdfFileNameNew, $index )
+{
+    global $cli;
+    $systemString = 'gs -dSAFER -dBATCH -dNOPAUSE -dFirstPage=' . $index . ' -dLastPage=' . $index . ' -sDEVICE=pdfwrite -sOutputFile=' . $pdfFileNameNew . ' ' . $pdfFileName;
+    @exec($systemString, $returnCode);
+    if(stristr($returnCode[0], "error") === false)
+    {
+        foreach ( $returnCode as $returnCodeItems )
+        {
+            // if last site is already converted 
+            if( strpos( $returnCodeItems, 'No pages will be processed' ) !== false || 
+                strpos( $returnCodeItems, 'Requested FirstPage is greater than the number of pages in the file' ) !== false )
+            {
+                return false;
+            }
+        }
+    }
+    else
+    {
+        eZDebug::writeError( "Failed executing: $systemString, Error code: $returnCode", __METHOD__ );
+        $cli->error( "Failed executing: $systemString, Error code: $returnCode, " . __METHOD__ );
+    }
+}
+function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock )
 {
     global $cli;
     $return = false;
@@ -234,7 +281,7 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock, $scrip
         {
             eZDebug::writeError( 'Unknown source file: ' . $imageFileName . ' after converting', __METHOD__ );
             $cli->error( 'Unknown source file: ' . $imageFileNameWatermark . ' after converting, ' . __METHOD__ );
-            $script->shutdown( 1 );
+            //$script->shutdown( 1 );
         }
         else
         {
@@ -247,7 +294,7 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock, $scrip
                     {
                         eZDebug::writeError( 'Unknown destination file: ' . $imageFileNameWatermark . ' for watermark', __METHOD__ );
                         $cli->error( 'Unknown destination file: ' . $imageFileNameWatermark . ' for watermark, ' . __METHOD__ );
-                        $script->shutdown( 1 );
+                        //$script->shutdown( 1 );
                     }
                     else
                     {
@@ -269,7 +316,7 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock, $scrip
                         {
                             eZDebug::writeError( "Failed executing: $watermarkSystemString, Error code: $watermarkReturnCode", __METHOD__ );
                             $cli->error( "Failed executing: $watermarkSystemString, Error code: $watermarkReturnCode, " . __METHOD__ );
-                            $script->shutdown( 1 );
+                            //$script->shutdown( 1 );
                         }
                     }
                 }
@@ -282,7 +329,7 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock, $scrip
     {
         eZDebug::writeError( "Failed executing: $systemString, Error code: $returnCode", __METHOD__ );
         $cli->error( "Failed executing: $systemString, Error code: $returnCode, " . __METHOD__ );
-        $script->shutdown( 1 );
+        //$script->shutdown( 1 );
     }
     return $return;
 }

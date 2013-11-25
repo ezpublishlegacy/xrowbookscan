@@ -590,6 +590,6 @@ class FPDI extends FPDF_TPL {
      * Removes cylced references and closes the file handles of the parser objects
      */
     function error($msg) {
-        die(var_dump($msg));
+        throw new Exception($msg);
     }
 }
