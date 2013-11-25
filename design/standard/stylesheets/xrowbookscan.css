@@ -1,0 +1,61 @@
+.xbs_zoomimageminus, .xbs_zoomimageplus {
+    border: 1px solid #000000;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    height: 18px;
+    margin: 3px;
+    overflow: hidden;
+    padding: 2px;
+    text-align: center;
+    width: 20px;
+}
+.xbs_zoomimageminus {
+    float: left;
+}
+.xbs_searchresult {
+    margin-bottom: 15px;
+}
+.xbs_showpreview {
+    float: left;
+    margin-right: 5px;
+    cursor: pointer;
+}
+.xbs_showpreview.xbs_more {
+    float: none;
+}
+.xbs_container {
+    margin-bottom: 10px;
+}
+.xbs_container:after {
+    clear: both;
+    content: "-";
+    display: block;
+    height: 0;
+    visibility: hidden;
+}
+.xbs_popup_container {
+    background: none repeat scroll 0 0 #FFFFFF;
+    box-shadow: 0 0 25px #000000;
+    left: 0;
+    position: absolute;
+    text-align: left;
+    top: 0;
+    z-index: 9999;
+}
+.xbs_popup_close {
+    background-color: #FFFFFF;
+    border: 1px solid #808080;
+    border-radius: 25px;
+    cursor: pointer;
+    display: block;
+    font-size: 16px;
+    font-weight: bold;
+    height: 25px;
+    line-height: 25px;
+    position: absolute;
+    right: -15px;
+    text-align: center;
+    top: -15px;
+    width: 25px;
+}

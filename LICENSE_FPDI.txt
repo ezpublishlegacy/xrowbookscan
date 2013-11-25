@@ -1,0 +1,1 @@
+FPDI is published under the Apache Software License, Version 2.0.
