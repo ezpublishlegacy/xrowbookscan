@@ -4,9 +4,9 @@ jQuery(document).ready(function($) {
             $(this).click(function(e){
                 var id = $(this).attr('data-pid'),
                     contid = $(this).attr('data-contid');
-                $.get($.ez.root_url + 'xrowbookscan/view', {'id': id, 'contid': contid}, function(data) {
+                $.ez('xrowbookscan::viewPage::'+id+'::'+contid, false, function(data) {
                     if(typeof data != "undefined") {
-                        $('body').append(data);
+                        $('body').append(data.content);
                         var left = e.pageX-(150),
                             top = e.pageY-(250),
                             popup_container_id = '#xbs_popup_'+contid;

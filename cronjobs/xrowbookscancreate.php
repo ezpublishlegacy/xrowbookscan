@@ -145,9 +145,8 @@ if( count( $bookscans ) > 0 )
                                                                 $cli->output( 'Created...' );
                                                                 // convert pdf to image
                                                                 $imageFilePathNew = preg_replace( '/.pdf/', '.png', $filePathNew );
-                                                                $imageFilePathNewTmp = preg_replace( '/.pdf/', 'tmp.png', $filePathNew );
                                                                 $cli->output( 'Start converting page no' . $i . ' to an image (' . $imageFilePathNew . ')' );
-                                                                $status = convertPDFtoImage( $filePathNew, $imageFilePathNewTmp, $settingsBlock, $script );
+                                                                $status = convertPDFtoImage( $filePathNew, $imageFilePathNew, $settingsBlock, $script );
                                                                 if( $status )
                                                                 {
                                                                     $cli->output( 'Converted...' );
@@ -163,9 +162,8 @@ if( count( $bookscans ) > 0 )
                                                                         if( $contentObject instanceof eZContentObject )
                                                                         {
                                                                             // delete pdf_xy.pdf and image_xy.png
-                                                                            unlink($filePathNew);
-                                                                            unlink($imageFilePathNew);
-                                                                            unlink($imageFilePathNewTmp);
+                                                                            unlink( $filePathNew );
+                                                                            unlink( $imageFilePathNew );
                                                                             $cli->output( 'Deleted tmp files' );
                                                                         }
                                                                     }
@@ -210,8 +208,8 @@ if( count( $bookscans ) > 0 )
                     }
                     else
                     {
-                        eZDebug::writeError( 'No AttributeNameFileForIndexing in Block Settings, xrowbookscan.ini', 'Cronjob xrowbookscan.php' );
-                        $cli->error( 'No AttributeNameFileForIndexing in Block Settings, xrowbookscan.ini, Cronjob xrowbookscancreate.php' );
+                        eZDebug::writeError( 'No AttributeNameFileForIndexing in Block Settings for class ' . $className . ', xrowbookscan.ini', 'Cronjob xrowbookscan.php' );
+                        $cli->error( 'No AttributeNameFileForIndexing in Block Settings for class ' . $className . ', xrowbookscan.ini, Cronjob xrowbookscancreate.php' );
                         $script->shutdown( 1 );
                     }
                 }
@@ -272,6 +270,12 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock )
         $filterPost = implode( ' ', $settingsBlock['ConvertFilterPDFPost'] );
     else
         $filterPost = '-quality 90';
+    $createWithWatermark = false;
+    if( isset( $settingsBlock['WatermarkSettings'] ) && $settingsBlock['WatermarkSettings'] == 'enabled' )
+    {
+        $createWithWatermark = true;
+        $imageFileName = preg_replace( '/.png/', 'tmp.png', $imageFileName );
+    }
     $systemString = $convert . ' ' . $filterPre . ' ' . $pdfFileName . ' ' . $filterPost . ' ' . $imageFileName;
     $cli->output( 'convertPDFtoImage system: ' . $systemString );
     system( $systemString, $returnCode );
@@ -287,7 +291,7 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock )
         {
             if( changeFilePermissions( $imageFileName ) )
             {
-                if( isset( $settingsBlock['WatermarkSettings'] ) && $settingsBlock['WatermarkSettings'] == 'enabled' )
+                if( $createWithWatermark )
                 {
                     $imageFileNameWatermark = $settingsBlock['WatermarkFileName'];
                     if ( !file_exists( $imageFileNameWatermark ) )
@@ -311,7 +315,10 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock )
                         $cli->output( 'convertPDFtoImage system watermark: ' . $watermarkSystemString );
                         system( $watermarkSystemString, $watermarkReturnCode );
                         if ( $watermarkReturnCode == 0 )
+                        {
                             $return = true;
+                            unlink( $imageFileName );
+                        }
                         else
                         {
                             eZDebug::writeError( "Failed executing: $watermarkSystemString, Error code: $watermarkReturnCode", __METHOD__ );
@@ -333,10 +340,6 @@ function convertPDFtoImage( $pdfFileName, $imageFileName, $settingsBlock )
     }
     return $return;
 }
-/*function createWatermark()
-{
-    convert -size 150x25 xc:grey30 -font Arial -pointsize 10 -gravity center -draw "fill grey70  text 0,0  '© Holzwerken'" stempelvordergrund.png
-}*/
 function changeFilePermissions( $filepath )
 {
     if ( !file_exists( $filepath ) )

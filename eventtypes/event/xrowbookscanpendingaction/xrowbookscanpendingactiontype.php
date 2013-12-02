@@ -49,6 +49,8 @@ class xrowBookScanPendingActionType extends eZWorkflowEventType
                                             {
                                                 $addToPendingAction = true;
                                             }
+                                            $attributeContent->setAttribute( 'data_int', 0 );
+                                            $attributeContent->store();
                                         }
                                     }
                                     else

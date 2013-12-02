@@ -26,31 +26,38 @@
     </div>
 {if is_set( $bookscanParentClass )}
     {if $bookscanParentClass|contains( $node.class_identifier )}
-    <div class="attribute-short" style="margin-left: 20px">
-        {def $search_bookscan = fetch( ezfind, search, hash( 'query', $search_string,
-                                                             'sort_by', hash( 'score', 'desc' ),
-                                                             'class_id', array( $bookscan.bookscanClass ),
-                                                             'limit', $bookscan.limitBookscan,
-                                                             'subtree_array', array( $node.node_id ),
-                                                             'limitation', hash( 'accessWord', 'limited', 
-                                                                                 'policies', array( hash( 'Class', $bookscan.bookscanClass,
-                                                                                                          'Section', array( $bookscan.bookscanSection ) ) ) ) ) )
-             $search_result_bookscan = $search_bookscan['SearchResult']
-             $search_count_bookscan = $search_bookscan['SearchCount']
-             $search_extras_bookscan = $search_bookscan['SearchExtras']
-             $stop_word_array_bookscan = $search_bookscan['StopWordArray']
-             $search_data_bookscan = $search_bookscan}
-        {if $search_count_bookscan|le( $bookscan.limitBookscan )}
-        <div>Ihre Suche nach <strong>"{$search_string}"</strong> ergab <strong>{$search_count_bookscan}</strong> in "{$node.name|wash()}".</div>
-        {else}
-        <div>Ihre Suche nach <strong>"{$search_string}"</strong> ergab <strong>{$search_count_bookscan}</strong> in "{$node.name|wash()}". Die {$bookscan.limitBookscan} relevantesten Seiten werden Ihnen angezeigt.
+        {def $bookscan_count = fetch( content, list_count, hash( 'parent_node_id', $node.node_id,
+                                                                 'class_filter_type', 'include',
+                                                                 'class_filter_array', array( $bookscan.bookscanClass ),
+                                                                 'limitation', array() ) )}
+        {if $bookscan_count|gt( 0 )}
+        <div class="attribute-short" style="margin-left: 20px">
+            {def $search_bookscan = fetch( ezfind, search, hash( 'query', $search_string,
+                                                                 'sort_by', hash( 'score', 'desc' ),
+                                                                 'class_id', array( $bookscan.bookscanClass ),
+                                                                 'limit', $bookscan.limitBookscan,
+                                                                 'subtree_array', array( $node.node_id ),
+                                                                 'limitation', hash( 'accessWord', 'limited', 
+                                                                                     'policies', array( hash( 'Class', $bookscan.bookscanClass,
+                                                                                                              'Section', array( $bookscan.bookscanSection ) ) ) ) ) )
+                 $search_result_bookscan = $search_bookscan['SearchResult']
+                 $search_count_bookscan = $search_bookscan['SearchCount']}
+            {if $search_count_bookscan|gt( 0 )}
+                {if $search_count_bookscan|le( $bookscan.limitBookscan )}
+                <div>Ihre Suche nach <strong>"{$search_string}"</strong> ergab <strong>{$search_count_bookscan}</strong> Treffer in "{$node.name|wash()}".</div>
+                {else}
+                <div>Ihre Suche nach <strong>"{$search_string}"</strong> ergab <strong>{$search_count_bookscan}</strong> Treffer in "{$node.name|wash()}". Die {$bookscan.limitBookscan} relevantesten Seiten werden Ihnen angezeigt.</div>
+                {/if}
+                {if $search_count_bookscan|gt( 0 )}
+                    {foreach $search_bookscan as $bookscanItem}
+                        {node_view_gui view=ezfind_line_bookscan content_node=$bookscanItem}
+                    {/foreach}
+                {/if}
+            {/if}
+            {undef $search_bookscan $search_result_bookscan $search_count_bookscan}
+        </div>
         {/if}
-        {if $search_count_bookscan|gt( 0 )}
-            {foreach $search_bookscan as $bookscanItem}
-                {node_view_gui view=ezfind_line_bookscan content_node=$bookscanItem}
-            {/foreach}
-        {/if}
-    </div>
+        {undef $bookscan_count}
     {/if}
 {else}
     <div class="message-error">WARNING: ClassNameParentForBookscan not set in xrowbookscan.ini or not added in search-template</div>
