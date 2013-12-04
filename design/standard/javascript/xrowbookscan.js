@@ -7,8 +7,8 @@ jQuery(document).ready(function($) {
                 $.ez('xrowbookscan::viewPage::'+id+'::'+contid, false, function(data) {
                     if(typeof data != "undefined") {
                         $('body').append(data.content);
-                        var left = e.pageX-(150),
-                            top = e.pageY-(250),
+                        var left = e.pageX+50,
+                            top = e.pageY-250,
                             popup_container_id = '#xbs_popup_'+contid;
                         if( left < 0)
                             left = 0;
