@@ -4,7 +4,7 @@ jQuery(document).ready(function($) {
             $(this).click(function(e){
                 var id = $(this).attr('data-pid'),
                     contid = $(this).attr('data-contid'),
-                    params = '::'+id+'::'+contid;
+                    params = id+'::'+contid;
                 if(typeof $(this).attr('data-href') != 'undefined') {
                     var href = $(this).attr('data-href');
                     params += '::'+href;
