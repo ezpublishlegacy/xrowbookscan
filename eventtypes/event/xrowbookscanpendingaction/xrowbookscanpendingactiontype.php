@@ -44,13 +44,14 @@ class xrowBookScanPendingActionType extends eZWorkflowEventType
                                         $dataMap = $obj->dataMap();
                                         if( isset( $dataMap[$checkValue] ) )
                                         {
-                                            $attributeContent = $dataMap[$checkValue]->content();
+                                            $attribute = $dataMap[$checkValue];
+                                            $attributeContent = $attribute->content();
                                             if( $attributeContent == 1 )
                                             {
                                                 $addToPendingAction = true;
                                             }
-                                            $attributeContent->setAttribute( 'data_int', 0 );
-                                            $attributeContent->store();
+                                            $attribute->setAttribute( 'data_int', 0 );
+                                            $attribute->store();
                                         }
                                     }
                                     else

@@ -78,6 +78,10 @@ if( count( $bookscans ) > 0 )
                                                     }
                                                 }
                                             }
+                                            else
+                                            {
+                                                $cli->output( 'No children to remove.' );
+                                            }
                                             $dataMap = $object->dataMap();
                                             if( isset( $dataMap[$attributeNameForFileForIndexing] ) )
                                             {
@@ -187,6 +191,11 @@ if( count( $bookscans ) > 0 )
                                                         //$script->shutdown( 1 );
                                                     }
                                                 }
+                                                else
+                                                {
+                                                    eZDebug::writeError( 'Attribute ' . $attributeNameForFileForIndexing . ' has no content. Chech the translation.', 'Cronjob xrowbookscan.php' );
+                                                    $cli->error( 'Attribute ' . $attributeNameForFileForIndexing . ' has no content. Chech the translation, Cronjob xrowbookscancreate.php' );
+                                                }
                                             }
                                             else
                                             {
@@ -229,7 +238,7 @@ else
 }
 
 $cli->output( '' );
-$cli->output( 'Ready, starts at ' . $start . ' ends at' . date( 'd.m.Y H:i', time() ) );
+$cli->output( 'Ready, starts at ' . date( 'd.m.Y H:i:s', $start ) . ' ends at' . date( 'd.m.Y H:i:s', time() ) );
 $cli->output( 'Time: ' . date( 'd.m.Y H:i', time() ) );
 
 function explodePDFwithGS( $pdfFileName, $pdfFileNameNew, $index )
