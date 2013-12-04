@@ -3,8 +3,13 @@ jQuery(document).ready(function($) {
         $('.xbs_showpreview').each(function(){
             $(this).click(function(e){
                 var id = $(this).attr('data-pid'),
-                    contid = $(this).attr('data-contid');
-                $.ez('xrowbookscan::viewPage::'+id+'::'+contid, false, function(data) {
+                    contid = $(this).attr('data-contid'),
+                    params = '::'+id+'::'+contid;
+                if(typeof $(this).attr('data-href') != 'undefined') {
+                    var href = $(this).attr('data-href');
+                    params += '::'+href;
+                }
+                $.ez('xrowbookscan::viewPage::'+params, false, function(data) {
                     if(typeof data != "undefined") {
                         $('body').append(data.content);
                         var left = e.pageX+50,

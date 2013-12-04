@@ -31,6 +31,11 @@ class xrowBookScanJscoreFunctions extends ezjscServerFunctions
                     $tpl = templateInit();
                     $tpl->setVariable( 'image', $image );
                     $tpl->setVariable( 'contid', $contid );
+                    if( isset( $params[2] ) )
+                    {
+                        $href = preg_replace( '/' . $secureToken . '/', '', base64_decode( $params[2] ) );
+                        $tpl->setVariable( 'href', $href );
+                    }
                     return $tpl->fetch( 'design:viewimage.tpl' );
                 }
             }
